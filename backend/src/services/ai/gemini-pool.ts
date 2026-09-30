@@ -22,10 +22,6 @@ export class GeminiKeyPool {
   private cooldownMs: number;
 
   constructor() {
-    if (config.geminiApiKeys.length === 0) {
-      throw new Error('No Gemini API keys configured. Set GEMINI_API_KEYS in .env');
-    }
-
     this.keys = config.geminiApiKeys.map((key) => ({
       key,
       failureCount: 0,
@@ -41,17 +37,24 @@ export class GeminiKeyPool {
     this.maxRetries = config.geminiMaxRetries;
     this.cooldownMs = config.geminiKeyCooldownMs;
 
-    logger.info(CONTEXT, `Initialized with ${this.keys.length} key(s) and ${this.models.length} model(s): ${this.models.map(m => m.name).join(', ')}`);
+    if (this.keys.length === 0) {
+      logger.warn(CONTEXT, '⚠️ No Gemini API keys configured yet. Set GEMINI_API_KEYS in environment.');
+    } else {
+      logger.info(CONTEXT, `Initialized with ${this.keys.length} key(s) and ${this.models.length} model(s): ${this.models.map(m => m.name).join(', ')}`);
+    }
   }
 
   /**
    * Dynamically detect if GEMINI_API_KEYS or GEMINI_MODELS changed in process.env.
    */
   private checkAndReloadConfig(): void {
-    const rawKeys = process.env.GEMINI_API_KEYS || '';
+    const rawKeys = process.env.GEMINI_API_KEYS || process.env.GEMINI_API_KEY || '';
     const currentKeysStr = this.keys.map((k) => k.key).join(',');
     if (rawKeys && rawKeys !== currentKeysStr) {
-      const newKeys = rawKeys.split(',').map((k) => k.trim()).filter(Boolean);
+      const newKeys = rawKeys
+        .split(/[\n,]+/)
+        .map((k) => k.trim().replace(/^["']|["']$/g, ''))
+        .filter(Boolean);
       if (newKeys.length > 0) {
         logger.info(CONTEXT, `Detected change in GEMINI_API_KEYS, reloading ${newKeys.length} key(s)`);
         this.keys = newKeys.map((key) => ({
@@ -67,13 +70,15 @@ export class GeminiKeyPool {
     const rawModels = process.env.GEMINI_MODELS || '';
     const currentModelsStr = this.models.map((m) => m.name).join(',');
     if (rawModels && rawModels !== currentModelsStr) {
-      const newModels = rawModels.split(',').map((m) => m.trim()).filter(Boolean);
+      const newModels = rawModels
+        .split(/[\n,]+/)
+        .map((m) => m.trim().replace(/^["']|["']$/g, ''))
+        .filter(Boolean);
       if (newModels.length > 0) {
         logger.info(CONTEXT, `Detected change in GEMINI_MODELS, reloading ${newModels.length} model(s)`);
         this.models = newModels.map((name, index) => ({
           name,
           priority: index,
-          cooldownUntil: null,
         }));
       }
     }
@@ -255,6 +260,10 @@ export class GeminiKeyPool {
     tools?: FunctionDeclarationsTool[]
   ): Promise<{ response: any; modelUsed: string }> {
     this.checkAndReloadConfig();
+
+    if (this.keys.length === 0) {
+      throw new Error('No Gemini API keys configured. Please configure GEMINI_API_KEYS in your environment variables.');
+    }
 
     const now = Date.now();
     // Filter out models currently in cooldown

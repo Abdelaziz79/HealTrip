@@ -2,20 +2,20 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-/** Parse comma-separated Gemini API keys from env */
+/** Parse comma-separated or newline-separated Gemini API keys from env */
 function parseGeminiKeys(): string[] {
-  const raw = process.env.GEMINI_API_KEYS || '';
+  const raw = process.env.GEMINI_API_KEYS || process.env.GEMINI_API_KEY || '';
   return raw
-    .split(',')
+    .split(/[\n,]+/)
     .map((k) => k.trim().replace(/^["']|["']$/g, ''))
     .filter(Boolean);
 }
 
-/** Parse comma-separated model names from env */
+/** Parse comma-separated or newline-separated model names from env */
 function parseGeminiModels(): string[] {
   const raw = process.env.GEMINI_MODELS || 'gemini-2.5-flash,gemini-2.5-flash-lite,gemini-3.5-flash,gemini-3.1-flash-lite,gemini-3.1-pro';
   return raw
-    .split(',')
+    .split(/[\n,]+/)
     .map((m) => m.trim().replace(/^["']|["']$/g, ''))
     .filter(Boolean);
 }
