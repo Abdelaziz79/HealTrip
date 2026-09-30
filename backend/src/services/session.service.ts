@@ -1,4 +1,4 @@
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'crypto';
 import { Session, ConversationMessage } from '../types';
 import { config } from '../config/env';
 import { logger } from '../utils/logger';
@@ -24,7 +24,7 @@ export class SessionService {
    */
   createSession(language: 'en' | 'ar' = 'en', customId?: string): Session {
     const session: Session = {
-      id: customId || uuidv4(),
+      id: customId || randomUUID(),
       messages: [],
       language,
       createdAt: Date.now(),
