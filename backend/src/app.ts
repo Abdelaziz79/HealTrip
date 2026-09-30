@@ -51,12 +51,17 @@ app.use(
   })
 );
 
+// ─── Favicon (Avoid 404 logs from browsers) ───────────────────────────────────
+app.get('/favicon.ico', (_req: Request, res: Response) => {
+  res.status(204).end();
+});
+
 // ─── Vercel Path Normalizer Middleware ────────────────────────────────────────
 // When deployed on Vercel with rewrites, restore the original requested path if collapsed to /api
 app.use((req: Request, _res: Response, next) => {
-  const original = (req.headers['x-forwarded-uri'] || req.headers['x-matched-path'] || req.originalUrl) as string;
-  if (original && original !== req.url && !req.url.startsWith('/api/v1') && !req.url.startsWith('/v1')) {
-    if (req.url === '/' || req.url === '/api' || req.url === '/api/' || req.url === '/api/index') {
+  if (req.url === '/api' || req.url === '/api/') {
+    const original = (req.headers['x-forwarded-uri'] || req.originalUrl) as string;
+    if (original && original !== req.url && (original.startsWith('/api/v1') || original.startsWith('/v1'))) {
       req.url = original;
     }
   }
@@ -72,23 +77,28 @@ app.use('/api', apiRateLimiter);
 
 // ─── Root & Info Routes ───────────────────────────────────────────────────────
 const rootHandler = (_req: Request, res: Response) => {
-  res.json({
-    status: 'online',
-    service: 'HealTrip AI Backend API',
-    version: '1.0.0',
-    environment: config.nodeEnv,
-    modelsAvailable: config.geminiModels.length,
-    keysConfigured: config.geminiApiKeys.length,
-    endpoints: {
-      health: '/api/v1/health',
-      chat: 'POST /api/v1/chat',
-      chatStream: 'POST /api/v1/chat/stream',
-      aiHealth: '/api/v1/chat/ai-health',
-      doctors: '/api/v1/doctors',
-      hospitals: '/api/v1/hospitals',
-      specialties: '/api/v1/specialties',
-    },
-  });
+  try {
+    res.json({
+      status: 'online',
+      service: 'HealTrip AI Backend API',
+      version: '1.0.0',
+      environment: config.nodeEnv,
+      modelsAvailable: config.geminiModels.length,
+      keysConfigured: config.geminiApiKeys.length,
+      endpoints: {
+        health: '/api/v1/health',
+        chat: 'POST /api/v1/chat',
+        chatStream: 'POST /api/v1/chat/stream',
+        aiHealth: '/api/v1/chat/ai-health',
+        doctors: '/api/v1/doctors',
+        hospitals: '/api/v1/hospitals',
+        specialties: '/api/v1/specialties',
+      },
+    });
+  } catch (err: any) {
+    logger.error('App', 'Error in rootHandler', err);
+    res.status(500).json({ error: err?.message || 'Internal error' });
+  }
 };
 
 app.get('/', rootHandler);
