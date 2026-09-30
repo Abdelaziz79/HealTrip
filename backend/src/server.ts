@@ -5,36 +5,38 @@ import { logger } from './utils/logger';
 
 const port = config.port;
 
-const server = app.listen(port, () => {
-  logger.info('Server', `🚀 HealTrip Backend is running on http://localhost:${port}`);
-  logger.info('Server', `🩺 Health check: http://localhost:${port}/api/v1/health`);
-  logger.info('Server', `💬 Chat endpoint: POST http://localhost:${port}/api/v1/chat`);
-  logger.info('Server', `🌐 Environment: ${config.nodeEnv}`);
-  logger.info('Server', `🔑 Gemini API keys configured: ${config.geminiApiKeys.length}`);
-  logger.info('Server', `🤖 Gemini models: ${config.geminiModels.join(', ')}`);
-});
-
-// ─── Graceful Shutdown ────────────────────────────────────────────────────────
-
-function gracefulShutdown(signal: string): void {
-  logger.info('Server', `Received ${signal}. Starting graceful shutdown...`);
-
-  server.close(() => {
-    logger.info('Server', 'HTTP server closed');
-    sessionService.destroy();
-    logger.info('Server', 'Cleanup complete. Exiting.');
-    process.exit(0);
+// Only start standalone HTTP server when not running in serverless environments (e.g. Vercel)
+if (!process.env.VERCEL) {
+  const server = app.listen(port, () => {
+    logger.info('Server', `🚀 HealTrip Backend is running on http://localhost:${port}`);
+    logger.info('Server', `🩺 Health check: http://localhost:${port}/api/v1/health`);
+    logger.info('Server', `💬 Chat endpoint: POST http://localhost:${port}/api/v1/chat`);
+    logger.info('Server', `🌐 Environment: ${config.nodeEnv}`);
+    logger.info('Server', `🔑 Gemini API keys configured: ${config.geminiApiKeys.length}`);
+    logger.info('Server', `🤖 Gemini models: ${config.geminiModels.join(', ')}`);
   });
 
-  // Force exit after 10 seconds if graceful shutdown hangs
-  setTimeout(() => {
-    logger.error('Server', 'Forced shutdown after timeout');
-    process.exit(1);
-  }, 10000);
-}
+  // ─── Graceful Shutdown ────────────────────────────────────────────────────────
+  const gracefulShutdown = (signal: string): void => {
+    logger.info('Server', `Received ${signal}. Starting graceful shutdown...`);
 
-process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
-process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+    server.close(() => {
+      logger.info('Server', 'HTTP server closed');
+      sessionService.destroy();
+      logger.info('Server', 'Cleanup complete. Exiting.');
+      process.exit(0);
+    });
+
+    // Force exit after 10 seconds if graceful shutdown hangs
+    setTimeout(() => {
+      logger.error('Server', 'Forced shutdown after timeout');
+      process.exit(1);
+    }, 10000);
+  };
+
+  process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+  process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+}
 
 // Handle unhandled rejections
 process.on('unhandledRejection', (reason, promise) => {
@@ -43,5 +45,9 @@ process.on('unhandledRejection', (reason, promise) => {
 
 process.on('uncaughtException', (error) => {
   logger.error('Server', 'Uncaught Exception', error);
-  process.exit(1);
+  if (!process.env.VERCEL) {
+    process.exit(1);
+  }
 });
+
+export default app;

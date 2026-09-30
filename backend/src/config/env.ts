@@ -7,16 +7,16 @@ function parseGeminiKeys(): string[] {
   const raw = process.env.GEMINI_API_KEYS || '';
   return raw
     .split(',')
-    .map((k) => k.trim())
+    .map((k) => k.trim().replace(/^["']|["']$/g, ''))
     .filter(Boolean);
 }
 
 /** Parse comma-separated model names from env */
 function parseGeminiModels(): string[] {
-  const raw = process.env.GEMINI_MODELS || 'gemini-3.5-flash,gemini-3.1-flash-lite,gemini-2.5-flash,gemini-2.5-flash-lite,gemini-3.1-pro,gemini-3.8-flash,gemini-3.7-flash,gemini-3.6-flash,gemini-2.5-pro,gemini-2.0-flash,gemini-2.0-flash-lite';
+  const raw = process.env.GEMINI_MODELS || 'gemini-2.5-flash,gemini-2.5-flash-lite,gemini-3.5-flash,gemini-3.1-flash-lite,gemini-3.1-pro';
   return raw
     .split(',')
-    .map((m) => m.trim())
+    .map((m) => m.trim().replace(/^["']|["']$/g, ''))
     .filter(Boolean);
 }
 

@@ -9,6 +9,7 @@ export const apiRateLimiter = rateLimit({
   max: config.rateLimitMaxRequests,
   standardHeaders: true,
   legacyHeaders: false,
+  validate: { trustProxy: false, xForwardedForHeader: false },
   message: {
     success: false,
     error: {
@@ -23,9 +24,10 @@ export const apiRateLimiter = rateLimit({
  */
 export const chatRateLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
-  max: 10, // 10 requests per minute
+  max: 30, // 30 requests per minute
   standardHeaders: true,
   legacyHeaders: false,
+  validate: { trustProxy: false, xForwardedForHeader: false },
   message: {
     success: false,
     error: {
