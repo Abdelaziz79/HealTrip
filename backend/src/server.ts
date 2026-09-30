@@ -49,5 +49,5 @@ process.on('uncaughtException', (error) => {
     process.exit(1);
   }
 });
-
-export default app;
+(app as any).default = app;
+export = app;
