@@ -2,6 +2,20 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
+/** Parse a string env var, stripping optional surrounding quotes */
+function cleanStr(val?: string, fallback = ''): string {
+  if (!val) return fallback;
+  return val.replace(/^["']|["']$/g, '').trim() || fallback;
+}
+
+/** Parse an integer env var, stripping quotes and falling back if NaN */
+function cleanInt(val?: string, fallback = 0): number {
+  if (!val) return fallback;
+  const cleaned = val.replace(/['"]/g, '').trim();
+  const n = parseInt(cleaned, 10);
+  return Number.isFinite(n) ? n : fallback;
+}
+
 /** Parse comma-separated or newline-separated Gemini API keys from env */
 function parseGeminiKeys(): string[] {
   const raw = process.env.GEMINI_API_KEYS || process.env.GEMINI_API_KEY || '';
@@ -20,23 +34,25 @@ function parseGeminiModels(): string[] {
     .filter(Boolean);
 }
 
+const nodeEnv = cleanStr(process.env.NODE_ENV, 'development');
+
 export const config = {
   // Server
-  port: parseInt(process.env.PORT || '5001', 10),
-  nodeEnv: process.env.NODE_ENV || 'development',
-  clientUrl: process.env.CLIENT_URL || 'http://localhost:3000',
-  isProduction: process.env.NODE_ENV === 'production',
+  port: cleanInt(process.env.PORT, 5001),
+  nodeEnv,
+  clientUrl: cleanStr(process.env.CLIENT_URL, 'http://localhost:3000'),
+  isProduction: nodeEnv === 'production',
 
   // Gemini AI
   geminiApiKeys: parseGeminiKeys(),
   geminiModels: parseGeminiModels(),
-  geminiMaxRetries: parseInt(process.env.GEMINI_MAX_RETRIES || '3', 10),
-  geminiKeyCooldownMs: parseInt(process.env.GEMINI_KEY_COOLDOWN_MS || '60000', 10),
+  geminiMaxRetries: cleanInt(process.env.GEMINI_MAX_RETRIES, 3),
+  geminiKeyCooldownMs: cleanInt(process.env.GEMINI_KEY_COOLDOWN_MS, 60000),
 
   // Session
-  sessionTtlMs: parseInt(process.env.SESSION_TTL_MS || '3600000', 10), // 1 hour
+  sessionTtlMs: cleanInt(process.env.SESSION_TTL_MS, 3600000), // 1 hour
 
   // Rate Limiting
-  rateLimitWindowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '60000', 10),
-  rateLimitMaxRequests: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '30', 10),
+  rateLimitWindowMs: cleanInt(process.env.RATE_LIMIT_WINDOW_MS, 60000),
+  rateLimitMaxRequests: cleanInt(process.env.RATE_LIMIT_MAX_REQUESTS, 30),
 };
